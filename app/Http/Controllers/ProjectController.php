@@ -13,7 +13,7 @@ class ProjectController extends Controller
   {
     $workspace = Utility::getWorkspace($request);
     $projects = $workspace->projects()
-      ->with('users')
+      ->with('users:id,username,name,avatar')
       ->withCount('tasks')
       ->get();
     return Utility::response200($projects);

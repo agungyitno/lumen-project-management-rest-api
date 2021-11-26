@@ -17,7 +17,7 @@ class CreateProjectsTable extends Migration
             $table->id();
             $table->string('name');
             $table->string('slug');
-            $table->enum('status', ['Ongoing', 'Finished', 'OnHold'])->default('Ongoing');
+            $table->enum('status', ['Ongoing', 'Finish', 'OnHold'])->default('Ongoing');
             $table->text('description')->nullable();
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
