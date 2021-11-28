@@ -1,0 +1,24 @@
+@startuml proman
+node PromanServer{
+  database PromanDatabase
+  component PromanService
+  PromanService-[dashed]->PromanDatabase
+}
+node Computer{
+  node WebBrowser{
+    component PromanClient
+  }
+}
+node Smartphone{
+  node PromanApp{
+    component PromanMobileClient
+  }
+}
+interface RestAPI
+
+PromanService == RestAPI
+RestAPI == PromanClient
+RestAPI == PromanMobileClient
+
+
+@enduml
