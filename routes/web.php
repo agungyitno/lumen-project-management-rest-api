@@ -16,30 +16,30 @@ use Illuminate\Http\Request;
 |
 */
 
-$router->get('/', ['middleware' => 'auth', function (Request $request) use ($router) {
-    // return $router->app->version();
-    return $request->user();
-}]);
+$router->post('/register',      'AuthController@register');
+$router->post('/login',         'AuthController@login');
+$router->post('/logout',        ['middleware' => 'auth', 'uses' => 'AuthController@logout']);
+$router->get('/me',             ['middleware' => ['auth', 'verified'], 'uses' => 'AuthController@me']);
+$router->get('/email/verify',   ['uses' => 'AuthController@emailVerify', 'as' => 'verification.verify']);
+$router->get('/email/request-verification', ['middleware' => ['auth'], 'as' => 'verification.notice', 'uses' => 'AuthController@emailRequestVerification']);
 
-$router->post('/register', 'AuthController@register');
-$router->post('/login', 'AuthController@login');
-$router->post('/logout', ['middleware' => 'auth', 'uses' => 'AuthController@logout']);
-$router->get('/profile', ['middleware' => 'auth', 'uses' => 'AuthController@profile']);
-
-$router->group(['prefix' => 'workspace', 'middleware' => 'auth'], function () use ($router) {
+$router->group(['prefix' => 'workspace', 'middleware' => ['auth', 'verified']], function () use ($router) {
     $router->get('/',               'WorkspaceController@index');
     $router->post('/',              'WorkspaceController@store');
+    $router->get('/{slug}',         'WorkspaceController@show');
     $router->put('/{slug}',         'WorkspaceController@update');
     $router->delete('/{slug}',      'WorkspaceController@destroy');
     $router->post('/change/{slug}', 'WorkspaceController@switch');
 });
-    $router->get('/user/{username}/avatar',           'UserController@avatar');
-$router->group(['prefix' => 'user', 'middleware' => 'auth'], function () use ($router) {
+
+$router->get('/user/{username}/avatar',           'UserController@avatar');
+$router->group(['prefix' => 'user', 'middleware' => ['auth', 'verified']], function () use ($router) {
     $router->get('/',           'UserController@index');
     $router->post('/',          'UserController@invite');
     $router->delete('/{id}',    'UserController@destroy');
 });
-$router->group(['prefix' => 'project', 'middleware' => 'auth'], function () use ($router) {
+
+$router->group(['prefix' => 'project', 'middleware' => ['auth', 'verified']], function () use ($router) {
     $router->get('/',                           'ProjectController@index');
     $router->post('/',                          'ProjectController@store');
     $router->get('/{slug}',                     'ProjectController@show');

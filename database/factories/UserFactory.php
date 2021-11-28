@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -17,6 +18,7 @@ class UserFactory extends Factory
             'username' => $this->faker->unique()->username,
             'email' => $this->faker->unique()->safeEmail,
             'password' => Hash::make('qwerty12345'),
+            'email_verified_at' => Carbon::now()->toDateTime(),
             'avatar' => 'default.png',
         ];
     }

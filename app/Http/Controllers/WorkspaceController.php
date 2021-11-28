@@ -18,6 +18,12 @@ class WorkspaceController extends Controller
     return Utility::response200($workspaces);
   }
 
+  public function show(Request $request, $slug)
+  {
+    $workspace = $request->user()->workspaces()->where('slug', $slug)->first();
+    return Utility::response200($workspace);
+  }
+
   public function store(Request $request)
   {
     $this->validate($request, [
@@ -32,7 +38,7 @@ class WorkspaceController extends Controller
       abort(404, 'Create workspace failed!');
     }
     $workspace->users()->attach($request->user()->id, ['role' => 'Owner']);
-    return Utility::response200(null, $workspace->name . ' workspace created successfully!');
+    return Utility::response200($workspace, $workspace->name . ' workspace created successfully!');
   }
 
   public function update(Request $request, $slug)
@@ -54,7 +60,7 @@ class WorkspaceController extends Controller
     if (!$workspace) {
       abort(404, 'Update workspace failed!');
     }
-    return Utility::response200(null, $workspace->name . ' workspace updated successfully!');
+    return Utility::response200($workspace, $workspace->name . ' workspace updated successfully!');
   }
 
   public function destroy(Request $request, $slug)

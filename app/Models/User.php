@@ -4,18 +4,20 @@ namespace App\Models;
 
 use App\Models\Project;
 use App\Models\Workspace;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Auth\Authenticatable;
+use Illuminate\Auth\MustVerifyEmail;
 use Laravel\Lumen\Auth\Authorizable;
 use Illuminate\Database\Eloquent\Model;
+use Tymon\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
+use Illuminate\Contracts\Auth\MustVerifyEmail as AuthMustVerifyEmail;
 
-class User extends Model implements AuthenticatableContract, AuthorizableContract
+class User extends Model implements AuthenticatableContract, JWTSubject, AuthMustVerifyEmail
 {
-    use Authenticatable, Authorizable, HasFactory;
+    use Authenticatable, HasFactory, Notifiable, MustVerifyEmail;
 
     // Non Fillable Column
     protected $guarded = ['id'];
@@ -25,6 +27,14 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
         'password',
     ];
 
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+    ];
+
+    public function workspace()
+    {
+        return $this->belongsTo(Workspace::class, 'current_workspace');
+    }
     public function workspaces()
     {
         return $this->belongsToMany(Workspace::class, 'users_workspaces')->withPivot('role');
@@ -45,46 +55,28 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
         return $this->hasMany(ActivityLog::class);
     }
 
-    public function createToken()
+    public function getJWTIdentifier()
     {
-        $token = sha1(time());
-        $insertToken = DB::table('access_tokens')->insert([
-            'user_id' => $this->id,
-            'token' => $token,
-            'expired' => Carbon::now()->addDays(30)->toDateTime()
-        ]);
-        if ($insertToken) {
-            return $token;
-        }
+        return $this->getKey();
     }
 
-    public static function checkToken($token)
+    public function getJWTCustomClaims()
     {
-        $token = explode(' ', $token);
-        if ($token[0] != 'Bearer') {
-            return false;
-        }
-        $isToken = DB::table('access_tokens')->where('token', $token[1])->first();
-        if (!$isToken) {
-            return false;
-        }
-        $isValid = Carbon::now()->lessThan($isToken->expired);
-        if (!$isValid) {
-            return false;
-        }
-        return User::where('id', $isToken->user_id)->first();
+        return [];
     }
 
-    public static function removeToken($token)
+    protected static function boot()
     {
-        $token = explode(' ', $token);
-        if ($token[0] != 'Bearer') {
-            return response()->json(['invalid Token'], 401);
-        }
-        $isToken = DB::table('access_tokens')->where('token', $token[1])->delete();
-        if (!$isToken) {
-            return ['Invalid Token'];
-        }
-        return true;
+        parent::boot();
+
+        static::saved(function ($model) {
+            /**
+             * If user email have changed email verification is required
+             */
+            if ($model->isDirty('email')) {
+                $model->setAttribute('email_verified_at', null);
+                $model->sendEmailVerificationNotification();
+            }
+        });
     }
 }

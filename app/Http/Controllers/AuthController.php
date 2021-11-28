@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Utility;
+use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
@@ -41,35 +43,63 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
         $fieldType = filter_var($request->username, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-        $user = User::where($fieldType, $request->username)->first();
-        if (!$user) {
-            return response()->json(['message' => 'Username or email not registered!'], 404);
+        if (!$token = Auth::attempt(array($fieldType => $request->username, 'password' => $request->password))) {
+            abort(401, ['error' => 'Unauthorized']);
         }
-        $isValidPassword = Hash::check($request->password, $user->password);
-        if (!$isValidPassword) {
-            return response()->json(['message' => 'Invalid Password!'], 404);
-        }
-
-        $token = $user->createToken();
-
-        return response()->json(['message' => 'Logged in', 'token' => $token], 200);
+        return $this->respondWithToken($token);
     }
 
-    public function profile(Request $request)
+    public function me(Request $request)
     {
-        $user = $request->user();
-        $active = $request->user()->workspaces()->where('id',$request->user()->current_workspace)->first();
-        return response()->json([
+        $user = Auth::user();
+        $active = $request->user()->workspaces()->where('id', $user->current_workspace)->first();
+        $data = [
             'user' => $user,
-            'activeWorkspace' => $active
-        ], 200);
+            'active' => $active
+        ];
+        return Utility::response200($data);
+        return response()->json($user, 200);
     }
 
     public function logout(Request $request)
     {
-        $token = $request->header('Authorization');
-        if (User::removeToken($token)) {
-            return response()->json(['message' => 'Logged out'], 200);
+        Auth::logout();
+        return response()->json(['message' => 'Successfully logged out']);
+    }
+
+    protected function respondWithToken($token)
+    {
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => Auth::factory()->getTTL() * 60
+        ]);
+    }
+
+    public function emailRequestVerification(Request $request)
+    {
+        // return response()->json($request->user()->hasVerifiedEmail());
+        if ($request->user()->hasVerifiedEmail()) {
+            return response()->json('Email address is already verified.');
         }
+        $request->user()->sendEmailVerificationNotification();
+        return response()->json('Email request verification sent to ' . Auth::user()->email);
+    }
+    public function emailVerify(Request $request)
+    {
+        $this->validate($request, [
+            'token' => 'required|string',
+        ]);
+        \Tymon\JWTAuth\Facades\JWTAuth::getToken();
+        \Tymon\JWTAuth\Facades\JWTAuth::parseToken()->authenticate();
+        if (!$request->user()) {
+            return response()->json('Invalid token', 401);
+        }
+
+        if ($request->user()->hasVerifiedEmail()) {
+            return response()->json('Email address ' . $request->user()->getEmailForVerification() . ' is already verified.');
+        }
+        $request->user()->markEmailAsVerified();
+        return response()->json('Email address ' . $request->user()->email . ' successfully verified.');
     }
 }

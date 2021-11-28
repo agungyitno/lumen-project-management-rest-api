@@ -56,6 +56,12 @@ class Handler extends ExceptionHandler
                 'message' => $exception->getMessage()
             ], $rendered->getStatusCode());
         }
+        if ($exception instanceof AuthorizationException) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage()
+            ], $rendered->getStatusCode());
+        }
         return $rendered;
     }
 }
