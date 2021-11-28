@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Workspace;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Auth\MustVerifyEmail;
+use Illuminate\Auth\Passwords\CanResetPassword;
 use Laravel\Lumen\Auth\Authorizable;
 use Illuminate\Database\Eloquent\Model;
 use Tymon\JWTAuth\Contracts\JWTSubject;
@@ -13,18 +14,19 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
+use Illuminate\Contracts\Auth\CanResetPassword as AuthCanResetPassword;
 use Illuminate\Contracts\Auth\MustVerifyEmail as AuthMustVerifyEmail;
 
-class User extends Model implements AuthenticatableContract, JWTSubject, AuthMustVerifyEmail
+class User extends Model implements AuthenticatableContract, JWTSubject, AuthMustVerifyEmail, AuthCanResetPassword
 {
-    use Authenticatable, HasFactory, Notifiable, MustVerifyEmail;
+    use Authenticatable, HasFactory, Notifiable, MustVerifyEmail, CanResetPassword;
 
     // Non Fillable Column
     protected $guarded = ['id'];
 
     // Hidden Column
     protected $hidden = [
-        'password',
+        'password', 'remember_token'
     ];
 
     protected $casts = [

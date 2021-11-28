@@ -43,8 +43,8 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
         $fieldType = filter_var($request->username, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-        if (!$token = Auth::attempt(array($fieldType => $request->username, 'password' => $request->password))) {
-            abort(401, ['error' => 'Unauthorized']);
+        if (!$token = Auth::attempt(array($fieldType => $request->username, 'password' => $request->password), true)) {
+            abort(401, 'Unauthorized');
         }
         return $this->respondWithToken($token);
     }
@@ -80,10 +80,10 @@ class AuthController extends Controller
     {
         // return response()->json($request->user()->hasVerifiedEmail());
         if ($request->user()->hasVerifiedEmail()) {
-            return response()->json('Email address is already verified.');
+            abort(404, 'Email address ' . $request->user()->getEmailForVerification() . ' is already verified.');
         }
         $request->user()->sendEmailVerificationNotification();
-        return response()->json('Email request verification sent to ' . Auth::user()->email);
+        return Utility::response200(null, 'Email request verification sent to ' . Auth::user()->email);
     }
     public function emailVerify(Request $request)
     {
@@ -93,13 +93,13 @@ class AuthController extends Controller
         \Tymon\JWTAuth\Facades\JWTAuth::getToken();
         \Tymon\JWTAuth\Facades\JWTAuth::parseToken()->authenticate();
         if (!$request->user()) {
-            return response()->json('Invalid token', 401);
+            abort(401, 'Invalid Token');
         }
 
         if ($request->user()->hasVerifiedEmail()) {
-            return response()->json('Email address ' . $request->user()->getEmailForVerification() . ' is already verified.');
+            abort(404, 'Email address ' . $request->user()->getEmailForVerification() . ' is already verified.');
         }
         $request->user()->markEmailAsVerified();
-        return response()->json('Email address ' . $request->user()->email . ' successfully verified.');
+        return Utility::response200(null, 'Email address ' . $request->user()->email . ' successfully verified.');
     }
 }

@@ -16,12 +16,25 @@ use Illuminate\Http\Request;
 |
 */
 
-$router->post('/register',      'AuthController@register');
-$router->post('/login',         'AuthController@login');
-$router->post('/logout',        ['middleware' => 'auth', 'uses' => 'AuthController@logout']);
-$router->get('/me',             ['middleware' => ['auth', 'verified'], 'uses' => 'AuthController@me']);
-$router->get('/email/verify',   ['uses' => 'AuthController@emailVerify', 'as' => 'verification.verify']);
-$router->get('/email/request-verification', ['middleware' => ['auth'], 'as' => 'verification.notice', 'uses' => 'AuthController@emailRequestVerification']);
+// Guest
+$router->group(['prefix' => ''], function () use ($router) {
+    $router->post('/register',      'AuthController@register');
+    $router->post('/login',         'AuthController@login');
+    $router->post('/password/reset-request', 'RequestPasswordController@sendResetLinkEmail');
+    $router->post('/password/reset', ['as' => 'password.reset', 'uses' => 'ResetPasswordController@reset']);
+});
+
+// Auth Middleware
+$router->group(['middleware' => ['auth']], function () use ($router) {
+    $router->post('/logout',      'AuthController@logout');
+    $router->get('/email/request-verification', ['as' => 'verification.notice', 'uses' => 'AuthController@emailRequestVerification']);
+    $router->get('/email/verify',   ['uses' => 'AuthController@emailVerify', 'as' => 'verification.verify']);
+
+    // Verified Middleware
+    $router->group(['middleware' => ['verified']], function () use ($router) {
+        $router->get('/me',      'AuthController@me');
+    });
+});
 
 $router->group(['prefix' => 'workspace', 'middleware' => ['auth', 'verified']], function () use ($router) {
     $router->get('/',               'WorkspaceController@index');
